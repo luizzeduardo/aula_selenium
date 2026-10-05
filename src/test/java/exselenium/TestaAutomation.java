@@ -1,6 +1,7 @@
 package exselenium;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
@@ -62,6 +63,127 @@ public class TestaAutomation {
         WebElement erro = espera.until(ExpectedConditions.visibilityOfElementLocated(
                 By.cssSelector("div.login-form p")));
         assertEquals("Your email or password is incorrect!", erro.getText());
+    }
+
+    // L2 - análise de valor limite: "a@b" é o menor e-mail que o navegador aceita
+    // e "x" é a menor senha possível (1 caractere); o servidor deve recusar o login
+    @Test
+    public void testLoginEmailESenhaNoLimiteMinimo() {
+        // passo 3: confere se a página inicial carregou
+        assertEquals("Automation Exercise", driver.getTitle());
+        WebElement logo = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("img[alt='Website for automation practice']")));
+        assertTrue(logo.isDisplayed(), "A página inicial não está visível!");
+
+        // passo 4: clica no botão Signup/Login
+        driver.findElement(By.cssSelector("a[href='/login']")).click();
+
+        // passo 5: confere se Login to your account aparece
+        WebElement tituloLogin = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form h2")));
+        assertEquals("Login to your account", tituloLogin.getText());
+
+        // passo 6: preenche o menor e-mail e a menor senha aceitos
+        driver.findElement(By.cssSelector("input[data-qa='login-email']")).sendKeys("a@b");
+        driver.findElement(By.cssSelector("input[data-qa='login-password']")).sendKeys("x");
+
+        // passo 7: clica no botão Login
+        driver.findElement(By.cssSelector("button[data-qa='login-button']")).click();
+
+        // passo 8: confere se a mensagem de erro aparece
+        WebElement erro = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form p")));
+        assertEquals("Your email or password is incorrect!", erro.getText());
+    }
+
+    // L3 - análise de valor limite: senha longa (100 caracteres); o campo não tem
+    // limite de tamanho, então a senha deve ir inteira e o login ser recusado
+    @Test
+    public void testLoginSenhaLonga() {
+        // monta uma senha com 100 letras "s" (o Java 8 não tem String.repeat)
+        String senhaLonga = new String(new char[100]).replace('\0', 's');
+
+        // passo 3: confere se a página inicial carregou
+        assertEquals("Automation Exercise", driver.getTitle());
+        WebElement logo = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("img[alt='Website for automation practice']")));
+        assertTrue(logo.isDisplayed(), "A página inicial não está visível!");
+
+        // passo 4: clica no botão Signup/Login
+        driver.findElement(By.cssSelector("a[href='/login']")).click();
+
+        // passo 5: confere se Login to your account aparece
+        WebElement tituloLogin = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form h2")));
+        assertEquals("Login to your account", tituloLogin.getText());
+
+        // passo 6: preenche um e-mail não cadastrado e a senha de 100 caracteres
+        driver.findElement(By.cssSelector("input[data-qa='login-email']")).sendKeys("naocadastrado_" + System.currentTimeMillis() + "@teste.com");
+        WebElement campoSenha = driver.findElement(By.cssSelector("input[data-qa='login-password']"));
+        campoSenha.sendKeys(senhaLonga);
+        // o campo aceitou os 100 caracteres sem cortar nenhum
+        assertEquals(100, campoSenha.getDomProperty("value").length());
+
+        // passo 7: clica no botão Login
+        driver.findElement(By.cssSelector("button[data-qa='login-button']")).click();
+
+        // passo 8: confere se a mensagem de erro aparece
+        WebElement erro = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form p")));
+        assertEquals("Your email or password is incorrect!", erro.getText());
+    }
+
+    // L4 - classe de equivalência inválida: e-mail vazio; o campo é obrigatório,
+    // então o próprio navegador impede o envio do formulário
+    @Test
+    public void testLoginEmailVazio() {
+        // passo 3: confere se a página inicial carregou
+        assertEquals("Automation Exercise", driver.getTitle());
+        WebElement logo = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("img[alt='Website for automation practice']")));
+        assertTrue(logo.isDisplayed(), "A página inicial não está visível!");
+
+        // passo 4: clica no botão Signup/Login
+        driver.findElement(By.cssSelector("a[href='/login']")).click();
+
+        // passo 5: confere se Login to your account aparece
+        WebElement tituloLogin = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form h2")));
+        assertEquals("Login to your account", tituloLogin.getText());
+
+        // passo 6: deixa o e-mail vazio e preenche só a senha
+        driver.findElement(By.cssSelector("input[data-qa='login-password']")).sendKeys("senha123");
+
+        // passo 7: clica no botão Login
+        driver.findElement(By.cssSelector("button[data-qa='login-button']")).click();
+
+        // passo 8: o navegador barra o e-mail e o formulário não chega ao servidor
+        String aviso = driver.findElement(By.cssSelector("input[data-qa='login-email']")).getDomProperty("validationMessage");
+        System.out.println("Aviso do navegador: " + aviso);
+        assertFalse(aviso.isEmpty(), "O navegador deveria ter barrado o e-mail vazio!");
+        assertTrue(driver.findElements(By.cssSelector("div.login-form p")).isEmpty(), "O formulário não deveria ter sido enviado!");
+    }
+
+    // L5 - classe de equivalência inválida: e-mail sem "@"; o campo é do tipo email,
+    // então o próprio navegador impede o envio do formulário
+    @Test
+    public void testLoginEmailSemArroba() {
+        // passo 3: confere se a página inicial carregou
+        assertEquals("Automation Exercise", driver.getTitle());
+        WebElement logo = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("img[alt='Website for automation practice']")));
+        assertTrue(logo.isDisplayed(), "A página inicial não está visível!");
+
+        // passo 4: clica no botão Signup/Login
+        driver.findElement(By.cssSelector("a[href='/login']")).click();
+
+        // passo 5: confere se Login to your account aparece
+        WebElement tituloLogin = espera.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector("div.login-form h2")));
+        assertEquals("Login to your account", tituloLogin.getText());
+
+        // passo 6: preenche um e-mail sem "@" e uma senha qualquer
+        driver.findElement(By.cssSelector("input[data-qa='login-email']")).sendKeys("usuario.teste.com");
+        driver.findElement(By.cssSelector("input[data-qa='login-password']")).sendKeys("senha123");
+
+        // passo 7: clica no botão Login
+        driver.findElement(By.cssSelector("button[data-qa='login-button']")).click();
+
+        // passo 8: o navegador barra o e-mail e o formulário não chega ao servidor
+        String aviso = driver.findElement(By.cssSelector("input[data-qa='login-email']")).getDomProperty("validationMessage");
+        System.out.println("Aviso do navegador: " + aviso);
+        assertFalse(aviso.isEmpty(), "O navegador deveria ter barrado o e-mail sem @!");
+        assertTrue(driver.findElements(By.cssSelector("div.login-form p")).isEmpty(), "O formulário não deveria ter sido enviado!");
     }
 
     @Test
